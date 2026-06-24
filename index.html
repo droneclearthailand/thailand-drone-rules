@@ -2,6 +2,154 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="google-site-verification" content="nAvgeUkqMKP6VruhuyF9_JgsA7IvqtPGzUtLqEya2QQ">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thailand Drone Rules &mdash; Live Status & No-Fly Zone Map (2026)</title>
+<meta name="description" content="Current Thailand drone registration rules, fees, no-fly zones, and border bans. Updated regularly. CAAT, NBTC, insurance requirements for tourists in 2026.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root{
+    --navy:#0D1B2A; --blue:#3A86FF; --bg:#0a0f16; --card:#111a26;
+    --line:#1f2c3a; --text:#e6edf3; --muted:#8a9aac;
+    --ok:#2ecc71; --warn:#f5a623; --bad:#e74c3c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 60px}
+  header{text-align:center;padding:20px 0 8px}
+  h1{font-size:1.9rem;font-weight:800;letter-spacing:-0.02em}
+  h1 span{color:var(--blue)}
+  .sub{color:var(--muted);font-size:.95rem;margin-top:6px}
+  .verified{display:inline-block;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:.82rem;color:var(--muted)}
+  .verified b{color:var(--ok)}
+  section{margin-top:34px}
+  h2{font-size:1.15rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  h2::before{content:"";width:4px;height:18px;background:var(--blue);border-radius:2px}
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .status-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+  .dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+  .dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+  .status-card .label{font-size:.8rem;color:var(--muted)}
+  .status-card .value{font-size:.95rem;font-weight:700}
+  .fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .fig{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .fig .rule{font-size:.8rem;color:var(--muted)}
+  .fig .val{font-size:1.25rem;font-weight:800;color:var(--blue);margin-top:2px}
+  #map{height:460px;border-radius:12px;border:1px solid var(--line);margin-top:4px;z-index:1}
+  .map-note{font-size:.78rem;color:var(--muted);margin-top:8px;text-align:center}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:14px;height:14px;border-radius:3px}
+  .changelog{list-style:none}
+  .changelog li{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:12px 16px;margin-bottom:8px}
+  .changelog .date{font-size:.75rem;color:var(--blue);font-weight:700;font-family:monospace}
+  .changelog .txt{font-size:.9rem;margin-top:3px}
+  .cta{background:linear-gradient(135deg,#16243a,#0d1b2a);border:1px solid var(--blue);border-radius:14px;padding:28px 24px;text-align:center;margin-top:40px}
+  .cta h3{font-size:1.3rem;font-weight:800;margin-bottom:8px}
+  .cta p{color:var(--muted);font-size:.95rem;max-width:480px;margin:0 auto 18px}
+  .cta a{display:inline-block;background:var(--blue);color:#fff;text-decoration:none;font-weight:700;padding:13px 30px;border-radius:8px;transition:transform .15s}
+  .cta a:hover{transform:translateY(-2px)}
+  .disclaimer{margin-top:36px;padding:16px;background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.3);border-radius:10px;font-size:.82rem;color:var(--muted)}
+  .disclaimer b{color:var(--warn)}
+  footer{text-align:center;margin-top:40px;font-size:.8rem;color:var(--muted)}
+  footer a{color:var(--blue);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Thailand <span>Drone Rules</span></h1>
+    <div class="sub">Live status, fees & no-fly zones for tourists flying drones in Thailand</div>
+    <div class="verified">Last verified: <b id="lastVerified">&mdash;</b></div>
+  </header>
+
+  <section>
+    <h2>Current Status</h2>
+    <div class="status-grid" id="statusGrid"></div>
+  </section>
+
+  <section>
+    <h2>Key Figures</h2>
+    <div class="fig-grid" id="figGrid"></div>
+  </section>
+
+  <section>
+    <h2>No-Fly Zone Map</h2>
+    <div id="map"></div>
+    <div class="legend">
+      <span><span class="swatch" style="background:rgba(231,76,60,.5)"></span>Airport 9km no-fly radius</span>
+      <span><span class="swatch" style="background:rgba(245,166,35,.5)"></span>Border-ban province</span>
+    </div>
+    <div class="map-note">For reference only. Airport zones are approximate 9km radii. Always verify current restrictions with CAAT and DJI FlySafe before flying.</div>
+  </section>
+
+  <section>
+    <h2>Recent Changes</h2>
+    <ul class="changelog" id="changelog"></ul>
+  </section>
+
+  <div class="cta">
+    <h3>Need help navigating all this?</h3>
+    <p>DroneClear Thailand handles CAAT + NBTC registration, insurance, and document review for tourists bringing drones to Thailand &mdash; so you arrive knowing exactly what to do.</p>
+    <a href="https://www.droneclearthailand.com" target="_blank" rel="noopener">Get Started &rarr;</a>
+  </div>
+
+  <div class="disclaimer">
+    <b>&#9888; Disclaimer:</b> This page is an independent reference compiled from public sources and updated regularly. Drone regulations in Thailand change frequently and without notice. This is guidance only, not legal advice. Always confirm current rules directly with the Civil Aviation Authority of Thailand (CAAT) and NBTC before flying.
+  </div>
+
+  <footer>
+    Data sourced from CAAT, NBTC & public announcements &middot; Independent reference &middot;
+    <a href="https://www.droneclearthailand.com" target="_blank" rel="noopener">DroneClear Thailand</a>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script>
+  // Inject data
+  document.getElementById('lastVerified').textContent = LAST_VERIFIED;
+
+  const sg = document.getElementById('statusGrid');
+  STATUS.forEach(s=>{
+    sg.innerHTML += `<div class="status-card"><div class="dot ${s.state}"></div>
+      <div><div class="label">${s.label}</div><div class="value">${s.value}</div></div></div>`;
+  });
+
+  const fg = document.getElementById('figGrid');
+  FIGURES.forEach(f=>{
+    fg.innerHTML += `<div class="fig"><div class="rule">${f.rule}</div><div class="val">${f.value}</div></div>`;
+  });
+
+  const cl = document.getElementById('changelog');
+  CHANGELOG.forEach(c=>{
+    cl.innerHTML += `<li><div class="date">${c.date}</div><div class="txt">${c.text}</div></li>`;
+  });
+
+  // Map
+  const map = L.map('map',{scrollWheelZoom:false}).setView([13.0, 101.5], 6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+  }).addTo(map);
+
+  AIRPORTS.forEach(a=>{
+    L.circle([a.lat,a.lng],{radius:9000,color:'#e74c3c',weight:1,fillColor:'#e74c3c',fillOpacity:.18})
+      .addTo(map).bindPopup(`<b>${a.name}</b><br>9km no-fly radius`);
+  });
+
+  BORDER_BANS.forEach(b=>{
+    L.circle([b.lat,b.lng],{radius:28000,color:'#f5a623',weight:1,fillColor:'#f5a623',fillOpacity:.22})
+      .addTo(map).bindPopup(`<b>${b.name}</b><br>Border-ban province &mdash; drone flights prohibited`);
+  });
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thailand Drone Rules &mdash; Live Status & No-Fly Zone Map (2026)</title>
 <meta name="description" content="Current Thailand drone registration rules, fees, no-fly zones, and border bans. Updated regularly. CAAT, NBTC, insurance requirements for tourists in 2026.">
