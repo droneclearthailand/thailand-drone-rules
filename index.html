@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thailand Drone Rules — Live Status & No-Fly Zone Map (2026)</title>
+<title>Thailand Drone Rules â Live Status & No-Fly Zone Map (2026)</title>
 <meta name="description" content="Current Thailand drone registration rules, fees, no-fly zones, and border bans. Updated regularly. CAAT, NBTC, insurance requirements for tourists in 2026.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
@@ -61,7 +61,7 @@
   <header>
     <h1>Thailand <span>Drone Rules</span></h1>
     <div class="sub">Live status, fees & no-fly zones for tourists flying drones in Thailand</div>
-    <div class="verified">Last verified: <b id="lastVerified">—</b></div>
+    <div class="verified">Last verified: <b id="lastVerified">â</b></div>
   </header>
 
   <section>
@@ -91,16 +91,16 @@
 
   <div class="cta">
     <h3>Need help navigating all this?</h3>
-    <p>DroneClear Thailand handles CAAT + NBTC registration, insurance, and document review for tourists bringing drones to Thailand — so you arrive knowing exactly what to do.</p>
-    <a href="https://www.droneclearthailand.com" target="_blank" rel="noopener">Get Started →</a>
+    <p>DroneClear Thailand handles CAAT + NBTC registration, insurance, and document review for tourists bringing drones to Thailand â so you arrive knowing exactly what to do.</p>
+    <a href="https://www.droneclearthailand.com" target="_blank" rel="noopener">Get Started â</a>
   </div>
 
   <div class="disclaimer">
-    <b>⚠ Disclaimer:</b> This page is an independent reference compiled from public sources and updated regularly. Drone regulations in Thailand change frequently and without notice. This is guidance only, not legal advice. Always confirm current rules directly with the Civil Aviation Authority of Thailand (CAAT) and NBTC before flying.
+    <b>â  Disclaimer:</b> This page is an independent reference compiled from public sources and updated regularly. Drone regulations in Thailand change frequently and without notice. This is guidance only, not legal advice. Always confirm current rules directly with the Civil Aviation Authority of Thailand (CAAT) and NBTC before flying.
   </div>
 
   <footer>
-    Data sourced from CAAT, NBTC & public announcements · Independent reference ·
+    Data sourced from CAAT, NBTC & public announcements Â· Independent reference Â·
     <a href="https://www.droneclearthailand.com" target="_blank" rel="noopener">DroneClear Thailand</a>
   </footer>
 </div>
@@ -128,9 +128,9 @@
   });
 
   // Map
-  const map = L.map('map',{scrollWheelZoom:false}).setView([13.5, 101.0], 5.4);
+  const map = L.map('map',{scrollWheelZoom:false}).setView([13.0, 101.5], 6);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© OpenStreetMap © CARTO', maxZoom:19
+    attribution:'Â© OpenStreetMap Â© CARTO', maxZoom:19
   }).addTo(map);
 
   AIRPORTS.forEach(a=>{
@@ -140,7 +140,7 @@
 
   BORDER_BANS.forEach(b=>{
     L.circle([b.lat,b.lng],{radius:28000,color:'#f5a623',weight:1,fillColor:'#f5a623',fillOpacity:.22})
-      .addTo(map).bindPopup(`<b>${b.name}</b><br>Border-ban province — drone flights prohibited`);
+      .addTo(map).bindPopup(`<b>${b.name}</b><br>Border-ban province â drone flights prohibited`);
   });
 </script>
 </body>
