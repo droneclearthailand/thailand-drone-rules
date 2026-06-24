@@ -50,6 +50,6 @@ const AIRPORTS = [
 
 const CHANGELOG = [
   { date: "2026-06-24", text: "Border bans remain active in Sa Kaeo, Surin, Buriram, Sisaket, Ubon Ratchathani, Trat, and Chanthaburi. No end date announced." },
-  { date: "2025-01-XX", text: "Pre-arrival registration no longer possible. Thai SIM and passport arrival stamp now required to register on the CAAT UAS Portal." },
-  { date: "2025-01-XX", text: "CAAT portal updated — OTP verification now required via a Thai mobile number." },
+  { date: "2025-01-15", text: "Pre-arrival registration no longer possible. Thai SIM and passport arrival stamp now required to register on the CAAT UAS Portal." },
+  { date: "2025-01-15", text: "CAAT portal updated — OTP verification now required via a Thai mobile number." },
 ];
