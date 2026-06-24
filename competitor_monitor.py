@@ -92,7 +92,7 @@ COMPETITORS = {
             "Also watch for: new service tiers at different price points, changes to what EUR 85 "
             "includes, expansion of content targeting non-German tourists."
         ),
-        "language": "GerMan",
+        "language": "German",
     },
     "thaifreude_en": {
         "name": "ThaiFreude (English service page)",
@@ -154,6 +154,39 @@ def clean_text(html):
         tag.decompose()
     text = re.sub(r"\s+", " ", soup.get_text(" ")).strip()
     return text
+
+
+def fetch_page(url):
+    """
+    Fetch a page with two attempts using progressively more browser-like headers.
+    Some sites (e.g. thaifreu.de) block plain datacenter UA strings but respond
+    to a realistic browser fingerprint. Returns (html_text, error_or_none).
+    """
+    attempts = [
+        {
+            "User-Agent": "Mozilla/5.0 DroneClearMonitor",
+        },
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Cache-Control": "no-cache",
+        },
+    ]
+    last_error = None
+    for headers in attempts:
+        try:
+            r = requests.get(url, timeout=30, headers=headers)
+            r.raise_for_status()
+            return r.text, None
+        except Exception as e:
+            last_error = e
+    return None, last_error
 
 
 def notify(msg):
@@ -225,7 +258,7 @@ DroneClear Thailand.
 
 Focus only on commercially meaningful changes:
   - Price changes (any currency — always note EUR/THB where relevant)
-  - New or Removed service tiers or products
+  - New or removed service tiers or products
   - Changes to what's included in existing packages
   - Changes in target audience or language
   - Changes in key positioning claims or guarantees
@@ -290,16 +323,17 @@ Significance guide:
 # Weekly digest formatter
 # ---------------------------------------------------------------------------
 
-def format_digest(changes):
+def format_digest(changes, warnings):
     """
     Build the weekly Telegram digest.
-    changes: list of (key, competitor, analysis_or_none, error_or_none)
-    Always sent — either a clean all-clear or a list of flagged changes.
+    changes:  list of (key, competitor, analysis, error) — real hash changes only
+    warnings: list of (key, competitor, error_string) — fetch failures, shown separately
+    Always sent — clean all-clear, changes, or fetch warnings.
     """
     today = (datetime.datetime.utcnow() + datetime.timedelta(hours=7)).strftime("%Y-%m-%d")
     sig_emoji = {"HIGH": "🚨", "MEDIUM": "⚠️", "LOW": "ℹ️", "NOISE": "·"}
 
-    if not changes:
+    if not changes and not warnings:
         checked = "\n".join(
             f"  • {c['name']}: {c['url']}" for c in COMPETITORS.values()
         )
@@ -309,43 +343,50 @@ def format_digest(changes):
             f"Pages checked:\n{checked}"
         )
 
-    lines = [
-        f"🗓 Competitor Monitor — {today}",
-        f"",
-        f"{len(changes)} page(s) changed this week:",
-    ]
+    lines = [f"🗓 Competitor Monitor — {today}", ""]
 
-    for key, competitor, analysis, error in changes:
-        lines += ["", "─" * 28]
-        lines.append(f"📍 {competitor['name']}")
-        lines.append(f"🔗 {competitor['url']}")
+    if changes:
+        lines.append(f"{len(changes)} page(s) changed this week:")
+        for key, competitor, analysis, error in changes:
+            lines += ["", "─" * 28]
+            lines.append(f"📍 {competitor['name']}")
+            lines.append(f"🔗 {competitor['url']}")
 
-        if error:
-            lines.append(f"⚠️ Analysis failed: {error}")
-            lines.append("Review manually.")
-        elif analysis:
-            sig    = analysis.get("significance", "?")
-            emoji  = sig_emoji.get(sig, "❓")
-            conf   = analysis.get("confidence", "?")
+            if error:
+                lines.append(f"⚠️ Analysis failed: {error}")
+                lines.append("Review manually.")
+            elif analysis:
+                sig   = analysis.get("significance", "?")
+                emoji = sig_emoji.get(sig, "❓")
+                conf  = analysis.get("confidence", "?")
+                lines += [
+                    "",
+                    f"{emoji} {sig}  (confidence: {conf})",
+                    "",
+                    "WHAT CHANGED",
+                    analysis.get("what_changed", "—"),
+                    "",
+                    "WHY IT MATTERS",
+                    analysis.get("why_it_matters", "—"),
+                ]
+                action = analysis.get("recommended_action")
+                if action:
+                    lines += ["", "ACTION", action]
+
+        lines += ["", "─" * 28, "Unmentioned pages: no changes detected."]
+
+    if warnings:
+        if changes:
+            lines.append("")
+        lines.append(f"⚠️ {len(warnings)} page(s) could not be fetched (not counted as changes):")
+        for key, competitor, err in warnings:
             lines += [
-                f"",
-                f"{emoji} {sig}  (confidence: {conf})",
-                f"",
-                f"WHAT CHANGED",
-                analysis.get("what_changed", "—"),
-                f"",
-                f"WHY IT MATTERS",
-                analysis.get("why_it_matters", "—"),
+                "",
+                f"  • {competitor['name']}: {competitor['url']}",
+                f"    Error: {err}",
+                f"    Snapshot not updated — will retry next week automatically.",
             ]
-            action = analysis.get("recommended_action")
-            if action:
-                lines += ["", f"ACTION", action]
 
-    lines += [
-        "",
-        "─" * 28,
-        "Unmentioned pages: no changes detected.",
-    ]
     return "\n".join(lines)
 
 
@@ -353,19 +394,23 @@ def format_digest(changes):
 # Main
 # ---------------------------------------------------------------------------
 
-changes_detected = []   # list of (key, competitor, analysis, error)
+changes_detected = []   # list of (key, competitor, analysis, error) — real hash changes
+warnings         = []   # list of (key, competitor, error_string) — fetch failures only
 
 for key, competitor in COMPETITORS.items():
     url = competitor["url"]
-    try:
-        r    = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0 DroneClearMonitor"})
-        text = clean_text(r.text)
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    except Exception as e:
-        print(f"Fetch error — {key}: {e}")
-        # Include fetch failures in digest so nothing goes silently missing
-        changes_detected.append((key, competitor, None, f"Fetch error: {e}"))
+    html, fetch_error = fetch_page(url)
+
+    if fetch_error:
+        print(f"Fetch error — {key}: {fetch_error}")
+        # Fetch failures are reported as warnings, NOT as changes.
+        # Snapshot is intentionally not updated so the real page content
+        # is still compared correctly on the next successful run.
+        warnings.append((key, competitor, str(fetch_error)))
         continue
+
+    text   = clean_text(html)
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     snap_file = SNAP_DIR / f"{key}.json"
     prev      = json.loads(snap_file.read_text()) if snap_file.exists() else {}
@@ -393,6 +438,6 @@ for key, competitor in COMPETITORS.items():
         print(f"No change: {key}")
 
 # Send weekly digest — always fires, regardless of whether changes were found
-digest_msg = format_digest(changes_detected)
+digest_msg = format_digest(changes_detected, warnings)
 notify(digest_msg)
 print("Weekly digest sent.")
