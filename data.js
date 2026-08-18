@@ -3,7 +3,7 @@
 // Edit this file to update the dashboard. Push to GitHub → Vercel auto-deploys.
 // ============================================================
 
-const LAST_VERIFIED = "2026-08-17";
+const LAST_VERIFIED = "2026-08-18";
 
 const STATUS = [
   { state: "warn", label: "Border province bans", value: "ACTIVE" },
